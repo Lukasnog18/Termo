@@ -3,6 +3,7 @@ using Termo;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors();
 builder.Services.AddDbContext<TermoContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ServerConnection")));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -17,6 +18,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(p =>
+    p.AllowAnyOrigin()
+    .AllowAnyHeader()
+    .AllowAnyMethod());
 
 var externalHttpService = new ExternalHttpService();
 
@@ -35,8 +41,14 @@ app.MapGet("/words", async (TermoContext context) =>
     return Results.Ok(word.Value);
 });
 
-app.MapPost("/words", async (TermoContext context, string word) =>
+app.MapPost("/words", async (TermoContext context) =>
 {
+    var words = await externalHttpService.GetWords();
+    Random rand = new Random();
+    var nextRandString = rand.Next(0, words.Count - 1);
+    string random = words[nextRandString];
+    string word = random;
+
     var day = DateTime.Now.Date;
     var wordDb = new DayWord()
     {
@@ -90,4 +102,4 @@ static WordResult ValidateWord(string dayWord, string wordAttempt)
 }
 
 internal record WordResult(Letter[] Letters, bool Success);
-internal record Letter(char Value, bool Exists, bool rightPlace);
+internal record Letter(char Value, bool Exists, bool RightPlace);

@@ -1,7 +1,9 @@
+import { WordValidations } from './models/WordValidations';
 import { Component, HostListener } from '@angular/core';
 import { WordService } from './word.service';
 import { catchError, throwError } from 'rxjs';
 import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { NotifierService } from 'angular-notifier';
 
 export enum Key {
   ArrowLeft = 'ArrowLeft',
@@ -21,7 +23,7 @@ export class AppComponent {
   currentRow = 0;
   success = false;
 
-  constructor(private service: WordService) { }
+  constructor(private service: WordService, private notifierService: NotifierService) { }
 
   onClick(event: Event) {
     if(!this.success) {
@@ -53,7 +55,7 @@ export class AppComponent {
           }
           this.setCurrentPositionValue();
       } else if(letter == Key.Enter){
-        //this.sendWord();
+        this.sendWord();
       }
     }
   }
@@ -77,7 +79,7 @@ export class AppComponent {
           }
           this.setCurrentPositionValue();
       } else if(key == Key.Enter){
-        //this.sendWord();
+        this.sendWord();
       }
     }
   }
@@ -108,7 +110,7 @@ export class AppComponent {
     var word = this.getWord();
 
     if(word.length < 5) {
-
+      this.notifierService.notify('info', 'Só palavras com 5 letras');
     } else {
       this.getValidations(word.toLocaleLowerCase());
     }
@@ -120,8 +122,8 @@ export class AppComponent {
 
     const row = document.querySelector(`[row="${this.currentRow}"]`);
     if(row != undefined){
-      for(let index = 0; index < row?.children.length; index++) {
-        const letter = row?.children.item(index)?.innerHTML;
+      for(let i = 0; i < row?.children.length; i++) {
+        const letter = row?.children.item(i)?.innerHTML;
         if(letter != undefined)
           word += letter;
       }
@@ -133,27 +135,76 @@ export class AppComponent {
   getValidations(word: string) {
     this.service.getValidations(word)
     .pipe(catchError((error: HttpErrorResponse) => {
+      if(error.status == 400)
+        this.notifierService.notify('info', 'Palavra não aceita');
       return throwError(() => null)
     }))
     .subscribe(p => {
       var validations = p;
       const row = document.querySelector(`[row="${this.currentRow}"]`)
 
-      for(let index = 0; index < validations.letters.length; index++) {
-        var validationLetter = validations.letters[index];
+      for(let i = 0; i < validations.letters.length; i++) {
+        var validationLetter = validations.letters[i];
 
         if(validationLetter.exists) {
           if(validationLetter.rightPlace) {
-            row?.querySelector(`[pos="${index}"]`)?.classList.add('right');
+            row?.querySelector(`[pos="${i}"]`)?.classList.add('right');
           } else {
-            row?.querySelector(`[pos="${index}"]`)?.classList.add('place');
+            row?.querySelector(`[pos="${i}"]`)?.classList.add('place');
           }
-        }else {
-          row?.querySelector(`[pos="${index}"]`)?.classList.add('wrong');
+        } else {
+          row?.querySelector(`[pos="${i}"]`)?.classList.add('wrong');
         }
-
+        setTimeout(() => {
+          row?.querySelector(`[pos="${i}"]`)?.classList.remove('edit');
+          row?.querySelector(`[pos="${i}"]`)?.classList.remove('active');
+        }, 1000);
       }
-    })
+      setTimeout(() => {
+        if(validations.success){
+          this.success = true;
+          this.notifierService.notify('info', 'Parabéns! Você ganhou!')
+        } else {
+          this.enableNextRow();
+        }
+        this.setKeyboardColors(validations);
+      }, 500);
+    });
+  }
+
+  setKeyboardColors(validations: WordValidations) {
+    for(let i = 0; i < validations.letters.length; i++) {
+      const validationLetter = validations.letters[i];
+      var element = document.querySelector(`[keyboard-key="${validationLetter.value.toUpperCase()}"]`);
+
+      if(validationLetter.exists) {
+        if(validationLetter.rightPlace) {
+          element?.classList.remove('place');
+          element?.classList.add('right');
+        } else {
+          element?.classList.add('place');
+        }
+      } else {
+        element?.classList.add('keyboard-wrong');
+      }
+    }
+
+  }
+
+  enableNextRow() {
+    this.currentRow++;
+
+    const row = document.querySelector(`[row="${this.currentRow}"]`);
+    if(row != undefined) {
+      for(let i = 0; i < row?.children.length; i++) {
+        const letter = row?.children.item(i);
+        letter?.classList.add('active');
+        if(i == 0)
+          letter?.classList.add('edit');
+      }
+    } else {
+      this.notifierService.notify('info', 'Você perdeu! Tente novamente');
+    }
   }
 
 }

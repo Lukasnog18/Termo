@@ -94,19 +94,19 @@
 }
 
 div[pos = "1"] {
-  animation-delay: 300ms !important;
+  animation-delay: 150ms !important;
 }
 
 div[pos = "2"] {
-  animation-delay: 600ms !important;
+  animation-delay: 300ms !important;
 }
 
 div[pos = "3"] {
-  animation-delay: 900ms !important;
+  animation-delay: 600ms !important;
 }
 
 div[pos = "4"] {
-  animation-delay: 1200ms !important;
+  animation-delay: 900ms !important;
 }
 
 @keyframes flip {
@@ -151,4 +151,15 @@ div[pos = "4"] {
 .letter.wrong {
   --color: #081d27;
   animation: 0.5s linear flip 0s forwards;
+}
+
+@keyframes changeColor {
+  from {background-color: #132e3b;}
+  to {background-color: var(--color);}
+}
+
+div[keyboard-key].place,
+div[keyboard-key].right,
+div[keyboard-key].keyboard-wrong {
+  animation: 0.5s linear changeColor 0s forwards;
 }
